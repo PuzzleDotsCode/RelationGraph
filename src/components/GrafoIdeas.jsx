@@ -256,7 +256,7 @@ const GrafoIdeas = () => {
         graphData={graphData}
         nodeCanvasObject={(node, ctx, globalScale) => {
           const title = node.title;
-          const fontSize = 12 / globalScale; // Scale text based on zoom level
+          const fontSize = 14 / globalScale; // Scale text based on zoom level
 
           const nodeSize = 2; // Node size
 
@@ -269,7 +269,7 @@ const GrafoIdeas = () => {
           // Draw node title
           ctx.font = `${fontSize}px Sans-Serif`;
           ctx.fillStyle = "black";
-          ctx.fillText(title, node.x + 10, node.y + 1);
+          ctx.fillText(title, node.x + 3, node.y + 1);
         }}
         linkCanvasObject={(link, ctx, globalScale) => {
           const fontSize = 8 / globalScale; // Scale text based on zoom level
