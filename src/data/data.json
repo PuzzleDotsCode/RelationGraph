@@ -2,7 +2,7 @@
   "nodes": [
     {
       "id": "1",
-      "title": "Idea Prima",
+      "title": "Idea Prime",
       "description": "Descripción de Idea A",
       "bullets": ["Nota 1", "Nota 2"],
       "tags": ["tag1"],
