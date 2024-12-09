@@ -1,35 +1,57 @@
-import React, { useState, useEffect } from 'react';
-import ForceGraph2D from 'react-force-graph-2d';
-import Cookies from 'js-cookie';
-import defaultData from '../data/data.json';
-import './GrafoIdeas.css';
+import React, { useState, useEffect } from "react";
+import ForceGraph2D from "react-force-graph-2d";
+import Cookies from "js-cookie";
+import defaultData from "../data/data.json";
+import "./GrafoIdeas.css";
 
 const GrafoIdeas = () => {
-  const [graphData, setGraphData] = useState(defaultData); // Inicializar con el archivo predeterminado
-  const [hoveredNode, setHoveredNode] = useState(null);
-  const [mode, setMode] = useState('edit'); // 'edit' activado por defecto
-  const [isEditingTitle, setIsEditingTitle] = useState(false); // Controla si el título está en modo edición
+  const [graphData, setGraphData] = useState(defaultData); // Initialize with default data
+  const [hoveredNode, setHoveredNode] = useState(null); // Track the hovered node
+  const [mode, setMode] = useState("edit"); // Default mode: 'edit'
+  const [isEditingTitle, setIsEditingTitle] = useState(false); // Track title editing state
   const [customTitle, setCustomTitle] = useState(
-    'Grafo Interactivo con Persistencia'
-  ); // Título predeterminado
+    "Interactive Graph with Persistence"
+  ); // Default title
+  const [settingsVisible, setSettingsVisible] = useState(false); // Track visibility of settings
 
-  // Cargar datos desde cookies o desde el archivo predeterminado
+  // Load data from cookies or default file
   useEffect(() => {
-    const savedData = Cookies.get('grafo_data');
+    const savedData = Cookies.get("grafo_data");
     if (savedData) {
       try {
         const parsedData = JSON.parse(savedData);
         setGraphData(parsedData);
         if (parsedData.title) setCustomTitle(parsedData.title);
       } catch (error) {
-        console.error('Error al leer la cookie grafo_data:', error);
+        console.error("Error reading cookie grafo_data:", error);
       }
     } else {
-      setGraphData(defaultData); // Usar datos predeterminados si no hay cookie
+      setGraphData(defaultData); // Use default data if no cookie is found
     }
   }, []);
 
-  // Manejar carga de archivo JSON
+  // Automatically update the graph if the JSON file changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const savedData = Cookies.get("grafo_data");
+      if (savedData) {
+        try {
+          const parsedData = JSON.parse(savedData);
+          setGraphData((prevData) => {
+            if (JSON.stringify(prevData) !== JSON.stringify(parsedData)) {
+              return parsedData;
+            }
+            return prevData;
+          });
+        } catch (error) {
+          console.error("Error updating data from cookie:", error);
+        }
+      }
+    }, 2000); // Check every 2 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  // Handle file upload
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -41,14 +63,14 @@ const GrafoIdeas = () => {
             nodes: jsonData.nodes || [],
             links: jsonData.links || [],
           });
-          if (jsonData.title) setCustomTitle(jsonData.title); // Actualizar el título si está presente
-          Cookies.set('grafo_data', JSON.stringify(jsonData), { expires: 0.5 }); // Guardar en cookie (12 horas)
+          if (jsonData.title) setCustomTitle(jsonData.title); // Update title if present
+          Cookies.set("grafo_data", JSON.stringify(jsonData), { expires: 0.5 }); // Save to cookie (12 hours)
           alert(
-            'Archivo cargado y guardado en la cookie. Persistencia activa por 12 horas.'
+            "File loaded and saved in cookie. Persistence active for 12 hours."
           );
         } catch (error) {
           alert(
-            'Error al leer el archivo JSON. Asegúrate de que tenga el formato correcto.'
+            "Error reading the JSON file. Ensure it has the correct format."
           );
         }
       };
@@ -56,30 +78,30 @@ const GrafoIdeas = () => {
     }
   };
 
-  // Cambiar entre modos de edición
+  // Switch between modes (edit or upload)
   const handleModeChange = (event) => {
     const selectedMode = event.target.value;
     setMode(selectedMode);
 
-    if (selectedMode === 'edit') {
-      const savedData = Cookies.get('grafo_data');
+    if (selectedMode === "edit") {
+      const savedData = Cookies.get("grafo_data");
       if (savedData) {
         try {
           const parsedData = JSON.parse(savedData);
           setGraphData(parsedData);
           if (parsedData.title) setCustomTitle(parsedData.title);
         } catch (error) {
-          console.error('Error al leer la cookie grafo_data:', error);
+          console.error("Error reading cookie grafo_data:", error);
         }
       } else {
-        setGraphData(defaultData); // Volver a datos predeterminados
+        setGraphData(defaultData); // Revert to default data
       }
     } else {
-      setGraphData({ nodes: [], links: [] }); // Limpiar datos en modo "Cargar archivo"
+      setGraphData({ nodes: [], links: [] }); // Clear data in upload mode
     }
   };
 
-  // Descargar datos como JSON limpio
+  // Download clean JSON data
   const downloadJSON = () => {
     const cleanedNodes = graphData.nodes.map((node) => ({
       id: node.id,
@@ -91,8 +113,8 @@ const GrafoIdeas = () => {
     }));
 
     const cleanedLinks = graphData.links.map((link) => ({
-      source: typeof link.source === 'object' ? link.source.id : link.source,
-      target: typeof link.target === 'object' ? link.target.id : link.target,
+      source: typeof link.source === "object" ? link.source.id : link.source,
+      target: typeof link.target === "object" ? link.target.id : link.target,
       label: link.label,
     }));
 
@@ -103,25 +125,114 @@ const GrafoIdeas = () => {
     };
 
     const blob = new Blob([JSON.stringify(cleanedData, null, 2)], {
-      type: 'application/json',
+      type: "application/json",
     });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = 'grafo_ideas.json';
+    a.download = "graph_data.json";
     a.click();
-    URL.revokeObjectURL(url); // Liberar memoria
+    URL.revokeObjectURL(url); // Free memory
   };
 
-  // Alternar el modo de edición del título
+  // Toggle title editing state
   const toggleTitleEdit = () => {
     setIsEditingTitle(!isEditingTitle);
   };
 
+  // Toggle settings visibility
+  const toggleSettings = () => {
+    setSettingsVisible(!settingsVisible);
+  };
+
   return (
     <div>
+
+    {/* Settings Section */}
+    <button
+      onClick={toggleSettings}
+      style={{
+        marginBottom: "10px",
+        padding: "10px 20px",
+        backgroundColor: "#007bff",
+        color: "#fff",
+        border: "none",
+        borderRadius: "5px",
+        cursor: "pointer",
+      }}
+    >
+      Settings
+    </button>
+
+    {settingsVisible && (
+      <div>
+        <div style={{ marginBottom: "20px" }}>
+          <label>
+            <input
+              type="radio"
+              name="mode"
+              value="upload"
+              checked={mode === "upload"}
+              onChange={handleModeChange}
+            />
+            Upload File
+          </label>
+          <label style={{ marginLeft: "20px" }}>
+            <input
+              type="radio"
+              name="mode"
+              value="edit"
+              checked={mode === "edit"}
+              onChange={handleModeChange}
+            />
+            Edit Online
+          </label>
+        </div>
+
+        {mode === "upload" && (
+          <div style={{ marginBottom: "20px" }}>
+            <input
+              type="file"
+              accept="application/json"
+              onChange={handleFileUpload}
+            />
+          </div>
+        )}
+
+        <button
+          style={{
+            marginBottom: "10px",
+            padding: "10px 20px",
+            backgroundColor: "#007bff",
+            color: "#fff",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+          }}
+          onClick={downloadJSON}
+        >
+          Download JSON
+        </button>
+      <button
+        onClick={toggleTitleEdit}
+        style={{
+          padding: "10px 20px",
+          marginLeft: '5px',
+          backgroundColor: "#007bff",
+          color: "#fff",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer",
+        }}
+      >
+        {isEditingTitle ? "Save Title" : "Edit Title"}
+      </button>
+      </div>
+    )}
+    {/* End Settings */}
+
       <div
-        style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}
+        style={{ display: "flex", alignItems: "center", marginBottom: "20px" }}
       >
         {isEditingTitle ? (
           <input
@@ -129,11 +240,11 @@ const GrafoIdeas = () => {
             value={customTitle}
             onChange={(e) => setCustomTitle(e.target.value)}
             style={{
-              fontSize: '24px',
-              padding: '5px',
-              marginRight: '10px',
+              fontSize: "24px",
+              padding: "5px",
+              marginRight: "10px",
               flex: 1,
-              border: '1px solid #ccc',
+              border: "1px solid #ccc",
             }}
           />
         ) : (
@@ -141,123 +252,77 @@ const GrafoIdeas = () => {
         )}
       </div>
 
-      <div style={{ marginBottom: '20px' }}>
-        <label>
-          <input
-            type="radio"
-            name="mode"
-            value="upload"
-            checked={mode === 'upload'}
-            onChange={handleModeChange}
-          />
-          Cargar archivo
-        </label>
-        <label style={{ marginLeft: '20px' }}>
-          <input
-            type="radio"
-            name="mode"
-            value="edit"
-            checked={mode === 'edit'}
-            onChange={handleModeChange}
-          />
-          Editar en línea
-        </label>
-      </div>
-
-      {mode === 'upload' && (
-        <div style={{ marginBottom: '20px' }}>
-          <input
-            type="file"
-            accept="application/json"
-            onChange={handleFileUpload}
-          />
-        </div>
-      )}
-
-      <button
-        style={{
-          marginBottom: '10px',
-          padding: '10px 20px',
-          backgroundColor: '#007bff',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: 'pointer',
-        }}
-        onClick={downloadJSON}
-      >
-        Descargar JSON
-      </button>
-      <button
-        onClick={toggleTitleEdit}
-        style={{
-          padding: '10px 20px',
-          marginLeft: '5px',
-          backgroundColor: '#007bff',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: 'pointer',
-        }}
-      >
-        {isEditingTitle ? 'Guardar Título' : 'Editar Título'}
-      </button>
-
       <ForceGraph2D
         graphData={graphData}
         nodeCanvasObject={(node, ctx, globalScale) => {
           const title = node.title;
-          const fontSize = 10 / globalScale; // Escalar texto según el zoom
+          const fontSize = 12 / globalScale; // Scale text based on zoom level
 
-          const nodeSize = 4; // Tamaño reducido del nodo
+          const nodeSize = 2; // Node size
 
-          // Dibujar nodo como círculo
+          // Draw node as a circle
           ctx.beginPath();
           ctx.arc(node.x, node.y, nodeSize, 0, 2 * Math.PI, false);
-          ctx.fillStyle = node.color || 'blue';
+          ctx.fillStyle = node.color || "blue";
           ctx.fill();
 
-          // Dibujar título del nodo
+          // Draw node title
           ctx.font = `${fontSize}px Sans-Serif`;
-          ctx.fillStyle = 'black';
-          ctx.fillText(title, node.x + 10, node.y + 3);
+          ctx.fillStyle = "black";
+          ctx.fillText(title, node.x + 10, node.y + 1);
         }}
         linkCanvasObject={(link, ctx, globalScale) => {
-          const fontSize = 8 / globalScale; // Escalar texto según el zoom
+          const fontSize = 8 / globalScale; // Scale text based on zoom level
+          const nodeSize = 2; // Same size as used in nodeCanvasObject
+          const arrowSize = 6; // Arrow size
 
-          // Dibujar línea del enlace
+          // Calculate the direction vector and its length
+          const dx = link.target.x - link.source.x;
+          const dy = link.target.y - link.source.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          // Adjust positions for the link line to account for node size and arrow size
+          const adjustedTargetX =
+            link.target.x - (dx / distance) * (nodeSize + arrowSize);
+          const adjustedTargetY =
+            link.target.y - (dy / distance) * (nodeSize + arrowSize);
+
+          const adjustedSourceX = link.source.x + (dx / distance) * nodeSize;
+          const adjustedSourceY = link.source.y + (dy / distance) * nodeSize;
+
+          // Draw link line excluding the arrow section
           ctx.beginPath();
-          ctx.moveTo(link.source.x, link.source.y);
-          ctx.lineTo(link.target.x, link.target.y);
-          ctx.strokeStyle = 'gray';
-          ctx.lineWidth = 1;
+          ctx.moveTo(adjustedSourceX, adjustedSourceY);
+          ctx.lineTo(adjustedTargetX, adjustedTargetY);
+          ctx.strokeStyle = link.color || "gray"; // Link color
+          ctx.lineWidth = link.width || 0.2; // Link width
           ctx.stroke();
 
-          // Dibujar label si existe
+          // Draw label if it exists
           if (link.label) {
-            const midX = (link.source.x + link.target.x) / 2;
-            const midY = (link.source.y + link.target.y) / 2;
+            const midX = (adjustedSourceX + adjustedTargetX) / 2;
+            const midY = (adjustedSourceY + adjustedTargetY) / 2;
 
-            // Dibujar el texto en el centro del enlace
+            // Draw text at the middle of the link
             ctx.font = `${fontSize}px Sans-Serif`;
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = "black";
             ctx.fillText(link.label, midX, midY);
           }
         }}
-        linkDirectionalArrowLength={6}
-        linkDirectionalArrowRelPos={1}
+        linkDirectionalArrowLength={6} // Arrow size
+        linkDirectionalArrowRelPos={1} // Adjust arrow to the very edge of the target
         onNodeHover={(node) => setHoveredNode(node || null)}
       />
 
       {hoveredNode && (
         <div
           style={{
-            position: 'absolute',
+            position: "absolute",
             left: 20,
             top: 20,
-            background: '#fff',
-            padding: '10px',
-            border: '1px solid #ccc',
+            background: "#fff",
+            padding: "10px",
+            border: "1px solid #ccc",
           }}
         >
           <h4>{hoveredNode.title}</h4>
@@ -267,7 +332,7 @@ const GrafoIdeas = () => {
               <li key={index}>{item}</li>
             ))}
           </ul>
-          <em>Tags: {hoveredNode.tags.join(', ')}</em>
+          <em>Tags: {hoveredNode.tags.join(", ")}</em>
         </div>
       )}
     </div>
